@@ -1,4 +1,5 @@
-﻿var appName = "Catalog API";
+﻿using Microsoft.eShopOnDapr.Services.Catalog.API.Controllers;
+var appName = "Catalog API";
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddCustomConfiguration();
@@ -35,6 +36,7 @@ app.UseCloudEvents();
 
 app.MapGet("/", () => Results.LocalRedirect("~/swagger"));
 app.MapControllers();
+app.MapCatalogEndpoint();
 app.MapSubscribeHandler();
 app.MapCustomHealthChecks("/hc", "/liveness", UIResponseWriter.WriteHealthCheckUIResponse);
 

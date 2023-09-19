@@ -1,31 +1,31 @@
-﻿namespace Microsoft.eShopOnDapr.Services.Catalog.API.Controllers;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
 
-[Route("api/v1/[controller]")]
-[ApiController]
-public class CatalogController : ControllerBase
+namespace Microsoft.eShopOnDapr.Services.Catalog.API.Controllers;
+
+public static class CatalogEndpoints
 {
-    private readonly CatalogDbContext _context;
-
-    public CatalogController(CatalogDbContext context)
+    public static void MapCatalogEndpoint(this IEndpointRouteBuilder app)
     {
-        _context = context;
-        _context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+        var group = app.MapGroup("api/v1/catalog");
+
+        group.MapGet("brands", CatalogBrandsAsync);
+
+        group.MapGet("types", CatalogTypesAsync);
+
+        group.MapGet("items/by_ids", ItemsByIdAsync);
+
+        group.MapGet("items/by_page", ItemsAsync);
     }
 
-    [HttpGet("brands")]
-    [ProducesResponseType(typeof(List<CatalogBrand>), (int)HttpStatusCode.OK)]
-    public Task<List<CatalogBrand>> CatalogBrandsAsync() =>
+    public static Task<List<CatalogBrand>> CatalogBrandsAsync(CatalogDbContext _context) =>
         _context.CatalogBrands.ToListAsync();
 
-    [HttpGet("types")]
-    [ProducesResponseType(typeof(List<CatalogType>), (int)HttpStatusCode.OK)]
-    public Task<List<CatalogType>> CatalogTypesAsync() =>
+    public static Task<List<CatalogType>> CatalogTypesAsync(CatalogDbContext _context) =>
         _context.CatalogTypes.ToListAsync();
 
-    [HttpGet("items/by_ids")]
-    [ProducesResponseType(typeof(List<CatalogItem>), (int)HttpStatusCode.OK)]
-    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-    public async Task<ActionResult<List<CatalogItem>>> ItemsAsync([FromQuery] string ids)
+    public static async Task<Results<Ok<List<ItemViewModel>>, BadRequest<string>>> ItemsByIdAsync(
+        [FromQuery] string ids, 
+        CatalogDbContext _context)
     {
         if (!string.IsNullOrEmpty(ids))
         {
@@ -43,20 +43,20 @@ public class CatalogController : ControllerBase
                         item.PictureFileName))
                     .ToListAsync();
 
-                return Ok(items);
+                return TypedResults.Ok(items);
             }
         }
 
-        return BadRequest("Ids value is invalid. Must be comma-separated list of numbers.");
-    }        
+        return TypedResults.BadRequest("Ids value is invalid. Must be comma-separated list of numbers.");
+    }
 
-    [HttpGet("items/by_page")]
-    [ProducesResponseType(typeof(PaginatedItemsViewModel), (int)HttpStatusCode.OK)]
-    public async Task<PaginatedItemsViewModel> ItemsAsync(
+    public static async Task<PaginatedItemsViewModel> ItemsAsync(
+        CatalogDbContext _context,
         [FromQuery] int typeId = -1,
         [FromQuery] int brandId = -1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] int pageIndex = 0)
+        [FromQuery] int pageIndex = 0
+        )
     {
         var query = (IQueryable<CatalogItem>)_context.CatalogItems;
 
